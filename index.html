@@ -109,7 +109,7 @@ body {
 .vars input { width: 76px; font: 600 16px var(--mono); padding: 5px 8px; border-radius: 6px; border: 1px solid var(--key-edge); background: var(--key); color: var(--key-ink); }
 .vars .vnote { color: var(--muted); font: 400 12px var(--body); }
 
-.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .slate { background: var(--slate); border-radius: 10px; padding: 10px 12px; min-height: 92px; display: flex; flex-direction: column; gap: 6px; }
 .slate .st { font: 600 14px/1.3 var(--display); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .slate .sb { margin: 0; font-size: 13px; color: var(--ink); }
@@ -126,6 +126,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
 .pad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .key { height: 44px; min-width: 0; border: 0; border-radius: 8px; font: 600 14px var(--mono); background: var(--key); color: var(--key-ink); box-shadow: 0 2px 0 var(--key-edge); user-select: none; padding: 0; }
+.pad.extras { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.key.wide { grid-column: span 4; font-size: 16px; letter-spacing: 0.06em; }
 .key.k-op, .key.k-var, .key.k-stack { background: var(--key-op); }
 .key.k-fn, .key.k-const { background: var(--key-fn); }
 .key.k-shift { background: var(--shift); color: var(--shift-ink); }
@@ -264,10 +266,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       </div>
       <div class="actions">
         <button class="act" id="bUndo" type="button" aria-label="Undo the last key">UNDO</button>
-        <button class="act" id="bDrop" type="button" aria-label="Drop the top value">DROP</button>
         <button class="act" id="bClear" type="button" aria-label="Clear the stack">CLEAR</button>
       </div>
       <div class="slate" id="slate" role="status" aria-live="polite"></div>
+      <div class="pad extras" id="extras"></div>
       <div class="pad" id="pad"></div>
     </section>
 
@@ -519,8 +521,8 @@ const Engine = (() => {
     ['sq', 'sqrt', 'inv', 'pow', 'abs'],
     ['d7', 'd8', 'd9', 'div', 'neg'],
     ['d4', 'd5', 'd6', 'mul', 'pdup'],
-    ['p1', 'd2', 'd3', 'sub', 'pswap'],
-    ['d0', 'px', 'py', 'add', 'peml'],
+    ['p1', 'd2', 'd3', 'sub', 'add'],
+    ['d0', 'peml'],
   ];
 
   // ---------- dependency graph, read straight from the guided recipes ----------
@@ -586,13 +588,16 @@ const Engine = (() => {
   }
   const prettyTokens = toks => toks.map(L).join(' ');
 
-  return { T, KEYS, LAYOUT, PRIM, C, step, run, lexRecipe, evalNode, findMatches, fmt, prettyTokens, graph };
+  // the row above the keypad; drop is an action key added next to these
+  const EXTRAS = ['px', 'py', 'pswap'];
+
+  return { T, KEYS, LAYOUT, EXTRAS, PRIM, C, step, run, lexRecipe, evalNode, findMatches, fmt, prettyTokens, graph };
 })();
 /*ENGINE-END*/
 
 (function () {
   'use strict';
-  const { T, KEYS, LAYOUT, PRIM } = Engine;
+  const { T, KEYS, LAYOUT, EXTRAS, PRIM } = Engine;
   const STORE = 'emlAlchemy.v1';
   const $ = s => document.querySelector(s);
   const mk = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt !== undefined) n.textContent = txt; return n; };
@@ -638,17 +643,25 @@ const Engine = (() => {
     $('#pstate').textContent = n === T.length ? 'Complete' : '';
   }
   function renderKeys() {
-    const pad = $('#pad');
+    const pad = $('#pad'), extras = $('#extras');
     pad.textContent = '';
-    LAYOUT.forEach(row => row.forEach(kid => {
+    extras.textContent = '';
+    const put = (host, kid) => {
       const k = KEYS[kid];
       const open = keyAvail(k);
-      const b = mk('button', 'key k-' + k.type + (open ? '' : ' ghost') + (fresh.has(kid) ? ' fresh' : ''), k.label);
+      const b = mk('button', 'key k-' + k.type + (kid === 'peml' ? ' wide' : '') + (open ? '' : ' ghost') + (fresh.has(kid) ? ' fresh' : ''), k.label);
       b.type = 'button';
       b.dataset.kid = kid;
       b.setAttribute('aria-label', open ? k.name : k.name + ', locked. Tap for a hint.');
-      pad.appendChild(b);
-    }));
+      host.appendChild(b);
+    };
+    EXTRAS.forEach(kid => put(extras, kid));
+    const drop = mk('button', 'key k-stack', 'drop');
+    drop.type = 'button';
+    drop.id = 'bDrop';
+    drop.setAttribute('aria-label', 'Drop the top value');
+    extras.appendChild(drop);
+    LAYOUT.forEach(row => row.forEach(kid => put(pad, kid)));
   }
   function renderLCD() {
     const box = $('#stack');
@@ -986,14 +999,16 @@ const Engine = (() => {
   window.addEventListener('hashchange', applyHash);
 
   // ---------- events ----------
-  $('#pad').addEventListener('click', e => {
+  const onKey = e => {
+    if (e.target.closest('#bDrop')) { drop(); return; }
     const b = e.target.closest('button[data-kid]');
     if (!b) return;
     const k = KEYS[b.dataset.kid];
     if (keyAvail(k)) apply(k.tok); else showHint(k.target);
-  });
+  };
+  $('#pad').addEventListener('click', onKey);
+  $('#extras').addEventListener('click', onKey);
   $('#bUndo').addEventListener('click', undo);
-  $('#bDrop').addEventListener('click', drop);
   $('#bClear').addEventListener('click', clearAll);
   $('#vx').addEventListener('input', renderLCD);
   $('#vy').addEventListener('input', renderLCD);

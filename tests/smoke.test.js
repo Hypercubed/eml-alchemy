@@ -7,15 +7,20 @@ const dom = new JSDOM('<!doctype html><html><head></head><body>' + html + '</bod
   beforeParse(w) { w.addEventListener('error', e => errors.push(e.message)); },
 });
 const d = dom.window.document;
-const live = label => Array.from(d.querySelectorAll('#pad .key')).find(k => k.textContent === label && !k.classList.contains('ghost'));
+const live = label => Array.from(d.querySelectorAll('#pad .key, #extras .key')).find(k => k.textContent === label && !k.classList.contains('ghost'));
 const press = label => { const b = live(label); if (!b) throw new Error('no live key ' + label); b.click(); };
 const ghost = label => Array.from(d.querySelectorAll('#pad .key.ghost')).some(k => k.textContent === label);
 const rows = () => Array.from(d.querySelectorAll('#stack .lvl')).map(r => r.textContent.replace(/\s+/g, ' ').trim());
 const slate = () => d.getElementById('slate').textContent;
 const log = (...a) => console.log(...a);
 
-log('keys', d.querySelectorAll('#pad .key').length, '| lit at start:', d.querySelectorAll('#pad .key:not(.ghost)').length, '| brackets/equals present:',
-  !!d.getElementById('bEq') || Array.from(d.querySelectorAll('#pad .key')).some(k => k.textContent === '(' || k.textContent === ')'));
+log('extras row:', Array.from(d.querySelectorAll('#extras .key')).map(k => k.textContent).join(' | '),
+    '| pad starts:', Array.from(d.querySelectorAll('#pad .key')).slice(0, 5).map(k => k.textContent).join(' '),
+    '| eml wide:', d.querySelector('#pad .key.wide').textContent, '| extras above pad:', !!(d.getElementById('extras').compareDocumentPosition(d.getElementById('pad')) & 4),
+    '| actions:', Array.from(d.querySelectorAll('.actions .act')).map(b => b.textContent).join(' '),
+    '| x/y/swap/drop left in pad:', Array.from(d.querySelectorAll('#pad .key')).filter(k => ['x', 'y', 'swap', 'drop'].includes(k.textContent)).length);
+log('keys', d.querySelectorAll('#pad .key, #extras .key').length, '| lit at start:', d.querySelectorAll('#pad .key:not(.ghost), #extras .key:not(.ghost)').length, '| brackets/equals present:',
+  !!d.getElementById('bEq') || Array.from(d.querySelectorAll('#pad .key, #extras .key')).some(k => k.textContent === '(' || k.textContent === ')'));
 log('stack at start:', rows());
 
 press('1'); press('1');
