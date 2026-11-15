@@ -1,0 +1,10 @@
+{
+  "name": "eml-alchemy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An alchemy-style game: build a scientific calculator from 1 and eml(a, b) = e^a - ln b.",
+  "scripts": {
+    "test": "node tests/recipes.test.js && node tests/smoke.test.js"
+  },
+  "devDependencies": { "jsdom": "^26.0.0" }
+}

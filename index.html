@@ -1,0 +1,1038 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>EML Alchemy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+:root {
+  /* Layout: calculator body on the left, notebook and tape on the right; stacked on phones.
+     Palette: a grey-green instrument case, an olive LCD, one amber for everything newly discovered. */
+  --page: #E8EBE4;
+  --case: #C5CBBD;
+  --case-edge: #A3AB9A;
+  --slate: #D6DBCE;
+  --card: #F0F2EC;
+  --line: #BDC4B3;
+  --ink: #1B2018;
+  --muted: #4F594A;
+  --lcd: #B9C69C;
+  --lcd-ink: #18200F;
+  --lcd-dim: #4B5A35;
+  --key: #F4F6F0;
+  --key-ink: #1B2018;
+  --key-edge: #8F9886;
+  --key-op: #DCE1D3;
+  --key-fn: #E7EAE0;
+  --ghost: #79836F;
+  --ghost-ink: #4A5343;
+  --shift: #E5A12E;
+  --shift-ink: #2A1A00;
+  --accent: #A65F00;
+  --accent-ink: #FFFFFF;
+  --glow: rgba(229, 161, 46, 0.6);
+  --err: #A3301D;
+  --seg: #B6BDAB;
+  --edge: #AEB6A4;
+  --hard: #A3301D;
+  --display: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --body: 'Inter', system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0D0F10; --case: #1B1F21; --case-edge: #0A0C0D; --slate: #242B2D; --card: #141718; --line: #2A3033;
+    --ink: #E4E8E0; --muted: #9AA494;
+    --lcd: #17241A; --lcd-ink: #B4EA86; --lcd-dim: #6E9A55;
+    --key: #2C3235; --key-ink: #E6EAE2; --key-edge: #0F1112; --key-op: #363D41; --key-fn: #31383B;
+    --ghost: #55605A; --ghost-ink: #9BA595;
+    --shift: #E8A83A; --shift-ink: #241700;
+    --accent: #F0B340; --accent-ink: #241700; --glow: rgba(240, 179, 64, 0.55); --err: #FF8F7A; --seg: #2C3235; --edge: #353D40; --hard: #FF8F7A;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0D0F10; --case: #1B1F21; --case-edge: #0A0C0D; --slate: #242B2D; --card: #141718; --line: #2A3033;
+  --ink: #E4E8E0; --muted: #9AA494;
+  --lcd: #17241A; --lcd-ink: #B4EA86; --lcd-dim: #6E9A55;
+  --key: #2C3235; --key-ink: #E6EAE2; --key-edge: #0F1112; --key-op: #363D41; --key-fn: #31383B;
+  --ghost: #55605A; --ghost-ink: #9BA595;
+  --shift: #E8A83A; --shift-ink: #241700;
+  --accent: #F0B340; --accent-ink: #241700; --glow: rgba(240, 179, 64, 0.55); --err: #FF8F7A; --seg: #2C3235; --edge: #353D40; --hard: #FF8F7A;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font: 14px/1.5 var(--body);
+  padding-block: 20px 36px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 16px; }
+.top h1 { font: 700 28px/1.1 var(--display); letter-spacing: -0.02em; margin: 0 0 4px; text-wrap: balance; }
+.top p { margin: 0; color: var(--muted); max-width: 46ch; }
+.rule { font-family: var(--mono); font-size: 13px; margin-top: 8px; color: var(--ink); }
+.rule b { font-weight: 700; color: var(--accent); }
+.progress { min-width: 0; flex: 1 1 220px; max-width: 360px; }
+.progress .count { display: flex; justify-content: space-between; font: 600 12px var(--mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.meter { display: flex; gap: 2px; }
+.seg { flex: 1; height: 8px; border-radius: 2px; background: var(--seg); }
+.seg.on { background: var(--accent); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 470px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .layout { grid-template-columns: minmax(0, 1fr); } .calc { max-width: 500px; width: 100%; margin-inline: auto; } }
+
+/* calculator body */
+.calc { background: var(--case); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 0 var(--case-edge), 0 8px 24px rgba(0, 0, 0, 0.12); }
+.lcd { background: var(--lcd); color: var(--lcd-ink); border-radius: 10px; padding: 8px 14px; font-family: var(--mono); box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28); }
+.stack { display: flex; flex-direction: column; }
+.lvl { display: grid; grid-template-columns: 2.4ch minmax(0, 1fr) auto; gap: 8px; align-items: baseline; font-size: 14px; line-height: 1.55; min-height: 1.55em; }
+.lvl .ln { color: var(--lcd-dim); }
+.lvl .lx { color: var(--lcd-dim); overflow-wrap: anywhere; }
+.lvl .lv { font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.lvl.top { border-top: 1px dashed var(--lcd-dim); margin-top: 3px; padding-top: 3px; font-size: 17px; }
+.lvl.top .lx { color: var(--lcd-ink); font-weight: 600; }
+.lvl .ph { font-weight: 400; }
+.deep { text-align: right; font-size: 11px; color: var(--lcd-dim); }
+.deep:empty { display: none; }
+
+.vars { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font: 600 13px var(--mono); color: var(--ink); }
+.vars label { display: inline-flex; align-items: center; gap: 6px; }
+.vars input { width: 76px; font: 600 16px var(--mono); padding: 5px 8px; border-radius: 6px; border: 1px solid var(--key-edge); background: var(--key); color: var(--key-ink); }
+.vars .vnote { color: var(--muted); font: 400 12px var(--body); }
+
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.slate { background: var(--slate); border-radius: 10px; padding: 10px 12px; min-height: 92px; display: flex; flex-direction: column; gap: 6px; }
+.slate .st { font: 600 14px/1.3 var(--display); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.slate .sb { margin: 0; font-size: 13px; color: var(--ink); }
+.slate .sc { font: 600 13px/1.4 var(--mono); background: var(--lcd); color: var(--lcd-ink); padding: 6px 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.slate .sa { display: flex; flex-wrap: wrap; gap: 6px; }
+.slate.err .st { color: var(--err); }
+.pill { font: 700 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent); color: var(--accent-ink); padding: 2px 7px; border-radius: 99px; }
+
+button { font-family: inherit; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.act { height: 40px; border: 0; border-radius: 8px; background: var(--key-op); color: var(--key-ink); font: 700 13px var(--mono); letter-spacing: 0.04em; box-shadow: 0 2px 0 var(--key-edge); }
+.act:active, .key:active { transform: translateY(1px); box-shadow: 0 1px 0 var(--key-edge); }
+.mini { border: 1px solid var(--key-edge); background: var(--key); color: var(--key-ink); border-radius: 6px; padding: 4px 10px; font: 600 12px var(--body); }
+
+.pad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.key { height: 44px; min-width: 0; border: 0; border-radius: 8px; font: 600 14px var(--mono); background: var(--key); color: var(--key-ink); box-shadow: 0 2px 0 var(--key-edge); user-select: none; padding: 0; }
+.key.k-op, .key.k-var, .key.k-stack { background: var(--key-op); }
+.key.k-fn, .key.k-const { background: var(--key-fn); }
+.key.k-shift { background: var(--shift); color: var(--shift-ink); }
+.key.ghost { background: transparent; border: 1px dashed var(--ghost); color: var(--ghost-ink); box-shadow: none; font-weight: 400; }
+.key.fresh { outline: 2px solid var(--accent); outline-offset: 1px; animation: pop 0.9s ease-out; }
+@keyframes pop {
+  0% { transform: scale(0.8); box-shadow: 0 0 0 0 var(--glow); }
+  40% { transform: scale(1.1); box-shadow: 0 0 0 9px transparent; }
+  100% { transform: scale(1); box-shadow: 0 2px 0 var(--key-edge); }
+}
+
+/* side column */
+.side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.card h2 { margin: 0 0 10px; font: 600 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+.card ul, .card ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.card li { min-width: 0; }
+.how code { font-family: var(--mono); font-size: 12.5px; background: var(--key-fn); padding: 1px 5px; border-radius: 4px; }
+.empty { color: var(--muted); font-style: italic; }
+.nb li { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: start; }
+.chip { font: 700 13px var(--mono); background: var(--key-op); border-radius: 6px; text-align: center; padding: 4px 0; color: var(--key-ink); }
+.nb .nm { font-weight: 600; font-size: 13px; }
+.nb .ex { font: 400 12.5px/1.4 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.tape li { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; font-family: var(--mono); font-size: 12.5px; }
+.tape .t-ex { overflow-wrap: anywhere; }
+.tape .t-res { font-weight: 700; margin-left: auto; }
+.badge { font: 700 10px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.foot { display: flex; justify-content: flex-end; }
+.foot button { background: transparent; border: 0; color: var(--muted); font: 500 12px var(--body); text-decoration: underline; padding: 4px 0; }
+
+[hidden] { display: none !important; }
+
+/* view tabs */
+.tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--case); border-radius: 10px; margin-bottom: 16px; }
+.tab { border: 0; background: transparent; color: var(--ink); font: 600 13px var(--body); padding: 7px 16px; border-radius: 7px; }
+.tab[aria-selected="true"] { background: var(--key); box-shadow: 0 1px 0 var(--key-edge); }
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* key map */
+.mapview { display: flex; flex-direction: column; gap: 14px; }
+.mapgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .mapgrid { grid-template-columns: minmax(0, 1fr); } }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.lg { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 22px; height: 14px; border-radius: 4px; display: inline-block; flex: none; }
+.sw.on { background: var(--accent); }
+.sw.ready { background: var(--key); border: 2px solid var(--accent); }
+.sw.lock { border: 1.5px dashed var(--ghost); }
+.sw.ring { border: 2px solid var(--hard); border-radius: 6px; }
+.graph { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
+.graph svg { display: block; width: 100%; min-width: 800px; height: auto; }
+.base { fill: var(--page); }
+.colh { fill: var(--muted); font: 600 10px var(--mono); text-anchor: middle; letter-spacing: 0.06em; }
+.edge { fill: none; stroke: var(--edge); stroke-width: 1.3; }
+.edge.on { stroke: var(--accent); stroke-width: 1.6; }
+.edge.hl { stroke: var(--ink); stroke-width: 2; }
+.edge.dim { opacity: 0.1; }
+.node { cursor: pointer; }
+.node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.node .bx { fill: var(--page); stroke: var(--ghost); stroke-width: 1.3; stroke-dasharray: 4 3; }
+.node .tx { fill: var(--ghost-ink); font: 700 13px var(--mono); text-anchor: middle; }
+.node .track { fill: var(--ghost); opacity: 0.2; }
+.node .bar { fill: var(--ghost); opacity: 0.85; }
+.node.st-ready .bx { fill: var(--key); stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; }
+.node.st-ready .tx { fill: var(--key-ink); }
+.node.st-ready .bar { fill: var(--key-ink); }
+.node.st-on .bx { fill: var(--accent); stroke: none; stroke-dasharray: none; }
+.node.st-on .tx { fill: var(--accent-ink); }
+.node.st-on .bar { fill: var(--accent-ink); }
+.node.st-on .track { fill: var(--accent-ink); opacity: 0.3; }
+.node .ring { fill: none; stroke: var(--hard); stroke-width: 2; }
+.node .selring { fill: none; stroke: var(--ink); stroke-width: 2; }
+.node.dim { opacity: 0.22; }
+.node0 .bx { fill: var(--ink); }
+.node0 .tx { fill: var(--page); font: 700 12px var(--mono); text-anchor: middle; }
+.node0 .sub { fill: var(--page); font: 500 9px var(--mono); text-anchor: middle; opacity: 0.75; }
+
+.detail { margin-top: 12px; min-height: 64px; display: flex; flex-direction: column; gap: 8px; }
+.detail p { margin: 0; }
+.dhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.dhead .dn { font: 600 15px var(--display); }
+.stat { font: 700 10px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.stat.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.stat.ready { border-color: var(--accent); color: var(--ink); }
+.stat.hard { border-color: var(--hard); color: var(--hard); }
+.dfacts { font: 400 13px var(--mono); }
+.needs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.nchip { border: 1px solid var(--key-edge); background: var(--key); color: var(--key-ink); border-radius: 6px; padding: 2px 8px; font: 700 12px var(--mono); }
+.nchip.lock { background: transparent; border-style: dashed; color: var(--ghost-ink); }
+.nchip.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.ranks { display: flex; flex-direction: column; gap: 2px; }
+.rrow { display: grid; grid-template-columns: 44px minmax(0, 1fr) 36px 62px; gap: 8px; align-items: center; padding: 5px 6px; border: 0; background: transparent; border-radius: 6px; color: var(--ink); font: 500 12px var(--mono); text-align: left; width: 100%; }
+.rrow:hover { background: var(--key-fn); }
+.rrow .rl { font-weight: 700; }
+.rtrack { height: 8px; border-radius: 4px; background: var(--seg); overflow: hidden; }
+.rfill { display: block; height: 100%; background: var(--ghost); }
+.rfill.hard { background: var(--hard); }
+.rrow .rv { text-align: right; }
+.rrow .rs { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.why p { margin: 0 0 8px; max-width: 70ch; }
+.why p:last-child { margin: 0; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { .key.fresh { animation: none; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>EML Alchemy</h1>
+      <p>Start with the number 1 and a single operation. Combine them until every key of a scientific calculator exists.</p>
+      <div class="rule"><b>a b eml</b> = e^a − ln b</div>
+    </div>
+    <div class="progress">
+      <div class="count"><span id="pcount">0 of 34 keys</span><span id="pstate"></span></div>
+      <div class="meter" id="meter" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <div class="tabs" role="tablist" aria-label="View">
+    <button class="tab" id="tabCalc" type="button" role="tab" aria-selected="true" aria-controls="viewCalc">Calculator</button>
+    <button class="tab" id="tabMap" type="button" role="tab" aria-selected="false" aria-controls="viewMap">Key map</button>
+  </div>
+
+  <main class="layout" id="viewCalc">
+    <section class="calc" aria-label="Calculator">
+      <div class="lcd">
+        <div class="stack" id="stack" aria-live="off"></div>
+        <div class="deep" id="deep"></div>
+      </div>
+      <div class="vars">
+        <label for="vx">x = <input id="vx" type="number" inputmode="decimal" step="any" value="2"></label>
+        <label for="vy">y = <input id="vy" type="number" inputmode="decimal" step="any" value="3"></label>
+        <span class="vnote">values shown in the stack</span>
+      </div>
+      <div class="actions">
+        <button class="act" id="bUndo" type="button" aria-label="Undo the last key">UNDO</button>
+        <button class="act" id="bDrop" type="button" aria-label="Drop the top value">DROP</button>
+        <button class="act" id="bClear" type="button" aria-label="Clear the stack">CLEAR</button>
+      </div>
+      <div class="slate" id="slate" role="status" aria-live="polite"></div>
+      <div class="pad" id="pad"></div>
+    </section>
+
+    <aside class="side">
+      <section class="card how">
+        <h2>How it works</h2>
+        <ul>
+          <li>Keys work on a stack, like an RPN calculator. Values (<code>1</code>, <code>x</code>, <code>y</code>, digits) land on the stack and an operation uses the top of it. No brackets needed.</li>
+          <li>Operations take values in the order you entered them: <code>1 1 eml</code> is 1 eml 1, and <code>x y −</code> is x − y.</li>
+          <li>There is no equals key. The moment a result behaves like a standard calculator key, that key unlocks. <code>x</code> and <code>y</code> stand for any number, so results are tested at many values, not only the ones in the boxes.</li>
+          <li><code>dup</code> copies the top value and <code>swap</code> exchanges the top two. Undo steps back one key.</li>
+          <li>Dashed keys are still locked. Tap one for a hint.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2><span>Notebook</span><span id="nbcount"></span></h2>
+        <ol class="nb" id="nb"></ol>
+      </section>
+      <section class="card">
+        <h2>Tape</h2>
+        <ol class="tape" id="tape"></ol>
+      </section>
+      <div class="foot"><button id="reset" type="button">Reset progress</button></div>
+    </aside>
+  </main>
+
+  <section class="mapview" id="viewMap" role="tabpanel" aria-label="Key map" hidden>
+    <div class="card">
+      <h2><span>Key map</span></h2>
+      <div class="legend">
+        <span class="lg"><span class="sw on"></span>Unlocked</span>
+        <span class="lg"><span class="sw ready"></span>Ready: you own every key its recipe needs</span>
+        <span class="lg"><span class="sw lock"></span>Locked</span>
+        <span class="lg"><span class="sw ring"></span>Very hard: 150+ eml operations</span>
+        <span class="lg">Bar under a key: cost, log scale. Numbers on top: depth.</span>
+      </div>
+      <div class="graph" id="graph"></div>
+      <div class="detail" id="detail" aria-live="polite"></div>
+    </div>
+    <div class="mapgrid">
+      <section class="card"><h2>Most expensive</h2><div class="ranks" id="rankCost"></div></section>
+      <section class="card"><h2>Longest chains</h2><div class="ranks" id="rankDepth"></div></section>
+    </div>
+    <section class="card why">
+      <h2>Why some keys are hard to reach</h2>
+      <p id="why1"></p>
+      <p id="why2"></p>
+      <p id="why3"></p>
+    </section>
+  </section>
+</div>
+
+<script>
+/*ENGINE-START*/
+const Engine = (() => {
+  'use strict';
+
+  // ---------- complex arithmetic (principal branches, ln 0 = -inf) ----------
+  const C = (re, im = 0) => ({ re, im });
+  const ONE = C(1, 0), I = C(0, 1);
+  const add = (a, b) => C(a.re + b.re, a.im + b.im);
+  const sub = (a, b) => C(a.re - b.re, a.im - b.im);
+  const mul = (a, b) => C(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
+  const div = (a, b) => {
+    const d = b.re * b.re + b.im * b.im;
+    if (d === 0) return C(NaN, NaN);
+    return C((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
+  };
+  const exp = z => {
+    if (z.im === 0) return C(Math.exp(z.re), 0);
+    const m = Math.exp(z.re);
+    return C(m * Math.cos(z.im), m * Math.sin(z.im));
+  };
+  const ln = z => {
+    if (z.re === 0 && z.im === 0) return C(-Infinity, 0);
+    if (!isFinite(z.re) || !isFinite(z.im)) return C(NaN, NaN);
+    return C(Math.log(Math.hypot(z.re, z.im)), Math.atan2(z.im + 0, z.re));
+  };
+  const sqrt = z => {
+    if (z.re === 0 && z.im === 0) return C(0, 0);
+    const r = Math.sqrt(Math.hypot(z.re, z.im)), t = Math.atan2(z.im + 0, z.re) / 2;
+    return C(r * Math.cos(t), r * Math.sin(t));
+  };
+  const pow = (a, b) => {
+    if (a.re === 0 && a.im === 0) return (b.re === 0 && b.im === 0) ? C(1, 0) : (b.re > 0 ? C(0, 0) : C(NaN, NaN));
+    return exp(mul(b, ln(a)));
+  };
+  const neg = z => sub(C(0, 0), z);
+  const abs = z => C(Math.hypot(z.re, z.im), 0);
+  const sin = z => C(Math.sin(z.re) * Math.cosh(z.im), Math.cos(z.re) * Math.sinh(z.im));
+  const cos = z => C(Math.cos(z.re) * Math.cosh(z.im), -Math.sin(z.re) * Math.sinh(z.im));
+  const sinh = z => C(Math.sinh(z.re) * Math.cos(z.im), Math.cosh(z.re) * Math.sin(z.im));
+  const cosh = z => C(Math.cosh(z.re) * Math.cos(z.im), Math.sinh(z.re) * Math.sin(z.im));
+  const asin = z => neg(mul(I, ln(add(mul(I, z), sqrt(sub(ONE, mul(z, z)))))));
+  const acos = z => sub(C(Math.PI / 2, 0), asin(z));
+  const atan = z => mul(div(I, C(2, 0)), sub(ln(sub(ONE, mul(I, z))), ln(add(ONE, mul(I, z)))));
+
+  // one-operand keys, two-operand keys, and the values that can sit on the stack
+  const FN = {
+    exp, ln, sqrt, abs, neg, sin, cos, asin, acos, atan, sinh, cosh,
+    log: z => div(ln(z), C(Math.LN10, 0)),
+    sq: z => mul(z, z),
+    inv: z => div(ONE, z),
+    tan: z => div(sin(z), cos(z)),
+    tanh: z => div(sinh(z), cosh(z)),
+  };
+  const BIN = {
+    '+': add, '-': sub, '*': mul, '/': div, '^': pow,
+    'eml': (a, b) => sub(exp(a), ln(b)),
+  };
+  const LEAF = new Set(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'e', 'pi', 'i', 'x', 'y']);
+  const PRIM = new Set(['1', 'x', 'y', 'eml', 'dup', 'swap']);
+
+  function leaf(tok, env) {
+    if (tok === 'x') return env.x;
+    if (tok === 'y') return env.y;
+    if (tok === 'e') return C(Math.E, 0);
+    if (tok === 'pi') return C(Math.PI, 0);
+    if (tok === 'i') return C(0, 1);
+    return C(Number(tok), 0);
+  }
+  function evalNode(n, env) {
+    if (n.k === 'leaf') return leaf(n.tok, env);
+    if (n.k === 'fn') return FN[n.tok](evalNode(n.a, env));
+    return BIN[n.op](evalNode(n.a, env), evalNode(n.b, env));
+  }
+
+  // ---------- the stack machine ----------
+  // A stack is an array of { ast, toks }. step() never mutates it, so undo is just keeping old arrays.
+  const TOKLABEL = { '-': '−', '*': '×', '/': '÷', 'pi': 'π', 'sqrt': '√' };
+  const L = t => TOKLABEL[t] || t;
+  function step(stack, tok) {
+    const n = stack.length;
+    const need = k => {
+      if (n < k) throw new Error(L(tok) + ' needs ' + (k === 1 ? 'one value' : 'two values') + ' on the stack, but the stack has ' + n + '.');
+    };
+    if (LEAF.has(tok)) return { stack: stack.concat([{ ast: { k: 'leaf', tok }, toks: [tok] }]), made: null };
+    if (tok === 'dup') { need(1); return { stack: stack.concat([stack[n - 1]]), made: null }; }
+    if (tok === 'swap') { need(2); return { stack: stack.slice(0, -2).concat([stack[n - 1], stack[n - 2]]), made: null }; }
+    if (FN[tok]) {
+      need(1);
+      const a = stack[n - 1];
+      const e = { ast: { k: 'fn', tok, a: a.ast }, toks: a.toks.concat([tok]) };
+      return { stack: stack.slice(0, -1).concat([e]), made: e };
+    }
+    if (BIN[tok]) {
+      need(2);
+      const a = stack[n - 2], b = stack[n - 1];
+      const e = { ast: { k: 'bin', op: tok, a: a.ast, b: b.ast }, toks: a.toks.concat(b.toks, [tok]) };
+      return { stack: stack.slice(0, -2).concat([e]), made: e };
+    }
+    throw new Error('Unknown key ' + tok);
+  }
+  function run(toks) {
+    let s = [];
+    toks.forEach(t => { s = step(s, t).stack; });
+    return s;
+  }
+  const lexRecipe = str => str.trim().split(/\s+/);
+
+  // ---------- targets: the keys of a scientific calculator ----------
+  const S_POS = [0.4, 1.3, 2.2, 3.7, 6.1];
+  const S_REAL = [-3.1, -1.2, -0.35, 0.8, 1.9, 4.4];
+  const S_UNIT = [-0.9, -0.55, -0.1, 0.35, 0.8];
+  const S_TRIG = [-2.0, -0.8, 0.3, 1.1, 2.4];
+  const S_PAIR = [[2, 3], [-1.5, 0.7], [4.2, -2.1], [0.6, 1.7], [-3, -0.4], [1.1, 2.9]];
+  const S_POW = [[2, 3], [0.5, -1.5], [4.2, 0.7], [1.3, 2.2], [6, -0.5]];
+  const un = a => a.map(v => [v]);
+  const K0 = [[]];
+
+  const T = [];
+  const def = (id, tok, label, name, type, desc, arity, samples, ref, hint, recipe) =>
+    T.push({ id, tok, label, name, type, desc, arity, samples, ref, hint, recipe });
+
+  def('e', 'e', 'e', 'Euler’s number', 'const', 'The constant 2.71828…', 0, K0, () => Math.E,
+    'eml uses the top two values on the stack. Feed it two 1s.', '1 1 eml');
+  def('exp', 'exp', 'exp', 'Exponential', 'fn', 'e raised to x', 1, un(S_REAL), Math.exp,
+    'a b eml is e^a − ln b. The ln part vanishes when b is 1, because ln 1 is 0.', 'x 1 eml');
+  def('d0', '0', '0', 'Zero', 'num', 'The number 0', 0, K0, () => 0,
+    'With a 1 underneath, 1 b eml = e − ln b. You need a b whose ln is exactly e. You can already make e to the power e.', '1 1 1 eml 1 eml eml');
+  def('ln', 'ln', 'ln', 'Natural logarithm', 'fn', 'The logarithm to base e', 1, un(S_POS), Math.log,
+    '1 x eml = e − ln x. The sign is flipped. Exponentiate that, then flip it again with another 1 under it.', '1 1 x eml 1 eml eml');
+  def('sub', '-', '−', 'Subtraction', 'op', 'x − y', 2, S_PAIR, (x, y) => x - y,
+    'Make e^a equal x and ln b equal y. Which a and b do that?', 'x ln y exp eml');
+  def('neg', 'neg', '±', 'Negate', 'fn', 'Changes the sign of x', 1, un(S_REAL), x => -x,
+    'Zero minus something.', '0 x -');
+  def('add', '+', '+', 'Addition', 'op', 'x + y', 2, S_PAIR, (x, y) => x + y,
+    'Subtracting a negative number adds.', 'x 0 y - -');
+  def('mul', '*', '×', 'Multiplication', 'op', 'x × y', 2, S_PAIR, (x, y) => x * y,
+    'Logarithms turn multiplication into addition. Undo them with exp.', 'x ln y ln + exp');
+  def('div', '/', '÷', 'Division', 'op', 'x ÷ y', 2, S_PAIR, (x, y) => x / y,
+    'Logarithms turn division into subtraction.', 'x ln y ln - exp');
+  def('inv', 'inv', '1/x', 'Reciprocal', 'fn', 'One divided by x', 1, un(S_REAL), x => 1 / x,
+    'Divide x into 1.', '1 x /');
+  def('sq', 'sq', 'x²', 'Square', 'fn', 'x times x', 1, un(S_REAL), x => x * x,
+    'x times itself.', 'x x *');
+  [[2, '1 1 +', 'Add 1 and 1.'],
+   [3, '2 1 +', 'One more than 2.'],
+   [4, '2 2 +', 'Two twos.'],
+   [5, '3 2 +', 'Two smaller numbers that add up to it.'],
+   [6, '3 2 *', 'A product of two smaller digits.'],
+   [7, '6 1 +', 'One more than 6.'],
+   [8, '4 2 *', 'A product of two smaller digits.'],
+   [9, '3 3 *', 'Three times three.']].forEach(([n, recipe, hint]) => {
+    def('d' + n, String(n), String(n), 'The number ' + n, 'num', 'The number ' + n, 0, K0, () => n, hint, recipe);
+  });
+  def('sqrt', 'sqrt', '√', 'Square root', 'fn', 'The positive root of x', 1, un(S_POS), Math.sqrt,
+    'Half of a logarithm is the logarithm of a square root.', 'x ln 2 / exp');
+  def('abs', 'abs', '|x|', 'Absolute value', 'fn', 'Distance of x from zero', 1, un(S_REAL), Math.abs,
+    'Square it, then take the root.', 'x x * sqrt');
+  def('pow', '^', 'x^y', 'Power', 'op', 'x raised to y', 2, S_POW, Math.pow,
+    'x^y = e^(y · ln x).', 'y x ln * exp');
+  def('log', 'log', 'log', 'Base-10 logarithm', 'fn', 'The logarithm to base 10', 1, un(S_POS), Math.log10,
+    'Base-10 log is ln x divided by ln 10. Build a 10 from the digits you have.', 'x ln 5 2 * ln /');
+  def('i', 'i', 'i', 'Imaginary unit', 'const', 'The square root of −1', 0, K0, () => ({ re: 0, im: 1 }),
+    'The logarithm of a negative number is complex. Halve a logarithm and exponentiate, or take a root.', '0 1 - sqrt');
+  def('pi', 'pi', 'π', 'Pi', 'const', 'The constant 3.14159…', 0, K0, () => Math.PI,
+    'ln(−1) is i times π. Divide the i away.', '0 1 - ln i /');
+  def('sin', 'sin', 'sin', 'Sine', 'fn', 'sin x, with x in radians', 1, un(S_TRIG), Math.sin,
+    'Euler: sin x = (e^(ix) − e^(−ix)) / 2i.', 'i x * exp 0 i x * - exp - 2 i * /');
+  def('cos', 'cos', 'cos', 'Cosine', 'fn', 'cos x, with x in radians', 1, un(S_TRIG), Math.cos,
+    'Euler: cos x = (e^(ix) + e^(−ix)) / 2.', 'i x * exp 0 i x * - exp + 2 /');
+  def('tan', 'tan', 'tan', 'Tangent', 'fn', 'tan x, with x in radians', 1, un(S_TRIG), Math.tan,
+    'Sine over cosine.', 'x sin x cos /');
+  def('sinh', 'sinh', 'sinh', 'Hyperbolic sine', 'fn', 'sinh x', 1, un(S_REAL), Math.sinh,
+    'Half the difference of e^x and e^(−x).', 'x exp 0 x - exp - 2 /');
+  def('cosh', 'cosh', 'cosh', 'Hyperbolic cosine', 'fn', 'cosh x', 1, un(S_REAL), Math.cosh,
+    'Half the sum of e^x and e^(−x).', 'x exp 0 x - exp + 2 /');
+  def('tanh', 'tanh', 'tanh', 'Hyperbolic tangent', 'fn', 'tanh x', 1, un(S_REAL), Math.tanh,
+    'sinh over cosh.', 'x sinh x cosh /');
+  def('asin', 'asin', 'asin', 'Inverse sine', 'fn', 'The angle whose sine is x', 1, un(S_UNIT), Math.asin,
+    'asin x = −i · ln(ix + √(1 − x²)).', '0 i i x * 1 x sq - sqrt + ln * -');
+  def('acos', 'acos', 'acos', 'Inverse cosine', 'fn', 'The angle whose cosine is x', 1, un(S_UNIT), Math.acos,
+    'A quarter turn minus asin x. A quarter turn is π/2.', 'pi 2 / x asin -');
+  def('atan', 'atan', 'atan', 'Inverse tangent', 'fn', 'The angle whose tangent is x', 1, un(S_REAL), Math.atan,
+    'atan x = (i/2) · (ln(1 − ix) − ln(1 + ix)).', 'i 2 / 1 i x * - ln 1 i x * + ln - *');
+
+  const KEYS = {};
+  T.forEach(t => { KEYS[t.id] = { kid: t.id, tok: t.tok, label: t.label, name: t.name, type: t.type, target: t }; });
+  [['p1', '1', '1', 'One', 'num'], ['px', 'x', 'x', 'The variable x', 'var'], ['py', 'y', 'y', 'The variable y', 'var'],
+   ['peml', 'eml', 'eml', 'The eml operation', 'shift'],
+   ['pdup', 'dup', 'dup', 'Duplicate the top value', 'stack'], ['pswap', 'swap', 'swap', 'Swap the top two values', 'stack']]
+    .forEach(([kid, tok, label, name, type]) => { KEYS[kid] = { kid, tok, label, name, type, target: null }; });
+
+  const LAYOUT = [
+    ['sin', 'cos', 'tan', 'pi', 'e'],
+    ['asin', 'acos', 'atan', 'i', 'exp'],
+    ['sinh', 'cosh', 'tanh', 'ln', 'log'],
+    ['sq', 'sqrt', 'inv', 'pow', 'abs'],
+    ['d7', 'd8', 'd9', 'div', 'neg'],
+    ['d4', 'd5', 'd6', 'mul', 'pdup'],
+    ['p1', 'd2', 'd3', 'sub', 'pswap'],
+    ['d0', 'px', 'py', 'add', 'peml'],
+  ];
+
+  // ---------- dependency graph, read straight from the guided recipes ----------
+  // deps:  the keys a recipe uses directly
+  // depth: the longest chain of keys that must be unlocked one after another
+  // cost:  eml operations in the fully expanded recipe (every key replaced by its own recipe)
+  function graph() {
+    const byTok = {};
+    T.forEach(t => { byTok[t.tok] = t; });
+    const nodes = {};
+    T.forEach(t => {
+      let cost = 0, depth = 0;
+      const deps = [];
+      lexRecipe(t.recipe).forEach(k => {
+        if (k === 'eml') cost++;
+        else if (byTok[k]) {
+          const d = nodes[byTok[k].id];
+          if (!d) throw new Error(t.id + ' uses ' + k + ' before it is defined');
+          cost += d.cost;
+          depth = Math.max(depth, d.depth);
+          if (!deps.includes(d.id)) deps.push(d.id);
+        }
+      });
+      nodes[t.id] = { id: t.id, deps, depth: depth + 1, cost };
+    });
+    return nodes;
+  }
+
+  // ---------- matching: does a result behave like a calculator key? ----------
+  const toC = v => (typeof v === 'number' ? C(v, 0) : v);
+  const close = (a, b) => isFinite(a.re) && isFinite(a.im) &&
+    Math.abs(a.re - b.re) <= 1e-8 * (1 + Math.abs(b.re)) && Math.abs(a.im - b.im) <= 1e-8 * (1 + Math.abs(b.im));
+  function walk(n, f) { f(n); if (n.a) walk(n.a, f); if (n.b) walk(n.b, f); }
+  function matches(t, ast, arity, uv) {
+    for (const s of t.samples) {
+      let env;
+      if (arity === 0) env = { x: C(1.7), y: C(0.6) };
+      else if (arity === 1) env = uv === 'x' ? { x: C(s[0]), y: C(0) } : { x: C(0), y: C(s[0]) };
+      else env = { x: C(s[0]), y: C(s[1]) };
+      if (!close(evalNode(ast, env), toC(t.ref(...s)))) return false;
+    }
+    return true;
+  }
+  function findMatches(ast) {
+    const vars = new Set();
+    walk(ast, n => { if (n.k === 'leaf' && (n.tok === 'x' || n.tok === 'y')) vars.add(n.tok); });
+    const arity = vars.size;
+    const uv = vars.has('y') && !vars.has('x') ? 'y' : 'x';
+    return T.filter(t => t.arity === arity && matches(t, ast, arity, uv));
+  }
+
+  // ---------- formatting ----------
+  const num = v => Number(v.toPrecision(10)).toString().replace('-', '−');
+  function fmt(z) {
+    if (Number.isNaN(z.re) || Number.isNaN(z.im)) return 'undefined';
+    if (!isFinite(z.re) || !isFinite(z.im)) return (z.im === 0 && z.re !== 0) ? (z.re > 0 ? '∞' : '−∞') : 'undefined';
+    const tol = 1e-9 * (1 + Math.abs(z.re) + Math.abs(z.im));
+    const re = Math.abs(z.re) < tol ? 0 : z.re, im = Math.abs(z.im) < tol ? 0 : z.im;
+    if (im === 0) return num(re);
+    const ims = (Math.abs(im) === 1 ? '' : num(Math.abs(im))) + 'i';
+    if (re === 0) return (im < 0 ? '−' : '') + ims;
+    return num(re) + (im < 0 ? ' − ' : ' + ') + ims;
+  }
+  const prettyTokens = toks => toks.map(L).join(' ');
+
+  return { T, KEYS, LAYOUT, PRIM, C, step, run, lexRecipe, evalNode, findMatches, fmt, prettyTokens, graph };
+})();
+/*ENGINE-END*/
+
+(function () {
+  'use strict';
+  const { T, KEYS, LAYOUT, PRIM } = Engine;
+  const STORE = 'emlAlchemy.v1';
+  const $ = s => document.querySelector(s);
+  const mk = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt !== undefined) n.textContent = txt; return n; };
+  const TOK2T = {};
+  T.forEach(t => { TOK2T[t.tok] = t; });
+
+  let unlocked = {};          // target id -> the key sequence that unlocked it
+  let stack = [];
+  let hist = [];              // earlier stacks, for undo
+  let tape = [];
+  const fresh = new Set();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE);
+      if (!raw) return;
+      const o = JSON.parse(raw);
+      if (o && o.unlocked && typeof o.unlocked === 'object') {
+        Object.keys(o.unlocked).forEach(id => { if (T.some(t => t.id === id)) unlocked[id] = String(o.unlocked[id]); });
+      }
+    } catch (e) { /* storage unavailable */ }
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify({ unlocked })); } catch (e) { /* ignore */ } }
+
+  const tokAvail = tok => PRIM.has(tok) || !!(TOK2T[tok] && unlocked[TOK2T[tok].id]);
+  const keyAvail = k => !k.target || !!unlocked[k.target.id];
+  const count = () => Object.keys(unlocked).length;
+
+  function getEnv() {
+    const f = id => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : null; };
+    const x = f('vx'), y = f('vy');
+    return { x: Engine.C(x === null ? 2 : x), y: Engine.C(y === null ? 3 : y) };
+  }
+  const valueOf = e => { try { return Engine.fmt(Engine.evalNode(e.ast, getEnv())); } catch (err) { return '?'; } };
+
+  // ---------- rendering ----------
+  function renderMeter() {
+    const m = $('#meter');
+    if (!m.children.length) for (let i = 0; i < T.length; i++) m.appendChild(mk('span', 'seg'));
+    const n = count();
+    Array.from(m.children).forEach((s, i) => s.classList.toggle('on', i < n));
+    $('#pcount').textContent = n + ' of ' + T.length + ' keys';
+    $('#pstate').textContent = n === T.length ? 'Complete' : '';
+  }
+  function renderKeys() {
+    const pad = $('#pad');
+    pad.textContent = '';
+    LAYOUT.forEach(row => row.forEach(kid => {
+      const k = KEYS[kid];
+      const open = keyAvail(k);
+      const b = mk('button', 'key k-' + k.type + (open ? '' : ' ghost') + (fresh.has(kid) ? ' fresh' : ''), k.label);
+      b.type = 'button';
+      b.dataset.kid = kid;
+      b.setAttribute('aria-label', open ? k.name : k.name + ', locked. Tap for a hint.');
+      pad.appendChild(b);
+    }));
+  }
+  function renderLCD() {
+    const box = $('#stack');
+    box.textContent = '';
+    const n = stack.length;
+    for (let lvl = 4; lvl >= 1; lvl--) {
+      const row = mk('div', 'lvl' + (lvl === 1 ? ' top' : ''));
+      row.appendChild(mk('span', 'ln', lvl + ':'));
+      const e = stack[n - lvl];
+      if (e) {
+        row.appendChild(mk('span', 'lx', Engine.prettyTokens(e.toks)));
+        row.appendChild(mk('span', 'lv', valueOf(e)));
+      } else if (lvl === 1) {
+        row.appendChild(mk('span', 'lx ph', 'empty. Try 1 1 eml'));
+        row.appendChild(mk('span', 'lv'));
+      } else {
+        row.appendChild(mk('span', 'lx'));
+        row.appendChild(mk('span', 'lv'));
+      }
+      box.appendChild(row);
+    }
+    $('#deep').textContent = n > 4 ? (n - 4) + ' more below' : '';
+  }
+  function renderNotebook() {
+    const ol = $('#nb');
+    ol.textContent = '';
+    const entries = Object.entries(unlocked).reverse();
+    $('#nbcount').textContent = entries.length ? String(entries.length) : '';
+    if (!entries.length) { ol.appendChild(mk('li', 'empty', 'Discoveries show up here with the keys that unlocked them.')); return; }
+    entries.forEach(([id, text]) => {
+      const k = KEYS[id];
+      const li = mk('li');
+      li.appendChild(mk('span', 'chip', k.label));
+      const d = mk('div');
+      d.appendChild(mk('div', 'nm', k.name));
+      d.appendChild(mk('div', 'ex', text));
+      li.appendChild(d);
+      ol.appendChild(li);
+    });
+  }
+  function renderTape() {
+    const ol = $('#tape');
+    ol.textContent = '';
+    if (!tape.length) { ol.appendChild(mk('li', 'empty', 'Every result you make is logged here.')); return; }
+    tape.forEach(r => {
+      const li = mk('li');
+      li.appendChild(mk('span', 't-ex', r.text));
+      li.appendChild(mk('span', 't-res', '= ' + r.res));
+      if (r.added.length) li.appendChild(mk('span', 'badge', 'new ' + r.added.join(' ')));
+      ol.appendChild(li);
+    });
+  }
+  function setSlate(s) {
+    const box = $('#slate');
+    box.className = 'slate' + (s.tone ? ' ' + s.tone : '');
+    box.textContent = '';
+    if (s.title) {
+      const t = mk('div', 'st');
+      if (s.pill) t.appendChild(mk('span', 'pill', s.pill));
+      t.appendChild(mk('span', '', s.title));
+      box.appendChild(t);
+    }
+    if (s.body) box.appendChild(mk('p', 'sb', s.body));
+    if (s.code) box.appendChild(mk('div', 'sc', s.code));
+    if (s.actions && s.actions.length) {
+      const a = mk('div', 'sa');
+      s.actions.forEach(x => { const b = mk('button', 'mini', x.label); b.type = 'button'; b.addEventListener('click', x.fn); a.appendChild(b); });
+      box.appendChild(a);
+    }
+  }
+
+  // ---------- slate messages ----------
+  function intro() {
+    setSlate({
+      title: 'Start here',
+      body: 'You hold a 1 and the eml operation. Press 1, 1, eml. No equals key: a new key appears as soon as your result earns it.',
+      actions: [{ label: 'Press them for me', fn: () => playTokens(['1', '1', 'eml']) }],
+    });
+  }
+  function showHint(t) {
+    setSlate({
+      title: t.label + '  ·  ' + t.name,
+      body: t.desc + '. Hint: ' + t.hint,
+      actions: [{ label: 'Show recipe', fn: () => showRecipe(t) }],
+    });
+  }
+  function showRecipe(t) {
+    const toks = Engine.lexRecipe(t.recipe);
+    const needs = [];
+    toks.forEach(tok => { const d = TOK2T[tok]; if (d && !unlocked[d.id] && !needs.includes(d.label)) needs.push(d.label); });
+    const actions = [{ label: 'Back to hint', fn: () => showHint(t) }];
+    if (!needs.length) actions.unshift({ label: 'Press them for me', fn: () => playTokens(toks) });
+    setSlate({
+      title: 'Recipe for ' + t.label,
+      body: needs.length ? 'You need these keys first: ' + needs.join(', ') + '.' : 'Every key it uses is on your keypad.',
+      code: Engine.prettyTokens(toks),
+      actions,
+    });
+  }
+
+  // ---------- the machine ----------
+  function clearFresh() {
+    fresh.clear();
+    document.querySelectorAll('.key.fresh').forEach(n => n.classList.remove('fresh'));
+  }
+  function onMade(e) {
+    const hits = Engine.findMatches(e.ast);
+    const added = hits.filter(t => !unlocked[t.id]);
+    const text = Engine.prettyTokens(e.toks);
+    tape.unshift({ text, res: valueOf(e), added: added.map(t => t.label) });
+    tape = tape.slice(0, 12);
+    renderTape();
+    if (added.length) {
+      added.forEach(t => { unlocked[t.id] = text; fresh.add(t.id); });
+      save();
+      renderKeys(); renderMeter(); renderNotebook(); renderMap();
+      const done = count() === T.length;
+      setSlate({
+        tone: 'ok',
+        pill: done ? 'Complete' : 'New key',
+        title: done ? 'Every key is on the keypad' : added.map(t => t.label).join('  '),
+        body: added.map(t => t.name + ': ' + t.desc).join('. ') + '.' + (done ? ' You built a scientific calculator from 1 and eml.' : ''),
+        code: text,
+      });
+    } else if (hits.length) {
+      setSlate({ title: 'That is ' + hits[0].name, body: 'This result behaves like ' + hits[0].label + ', which is already on the keypad.', code: text });
+    }
+  }
+  function apply(tok, keepFresh) {
+    if (!keepFresh) clearFresh();
+    let res;
+    try { res = Engine.step(stack, tok); }
+    catch (err) { setSlate({ tone: 'err', title: 'Not enough on the stack', body: err.message }); return false; }
+    hist.push(stack);
+    stack = res.stack;
+    renderLCD();
+    if (res.made) onMade(res.made);
+    return true;
+  }
+  function playTokens(toks) {
+    clearFresh();
+    for (const t of toks) { if (!tokAvail(t) || !apply(t, true)) break; }
+  }
+  function undo() {
+    clearFresh();
+    if (!hist.length) return;
+    stack = hist.pop();
+    renderLCD();
+  }
+  function drop() { if (!stack.length) return; clearFresh(); hist.push(stack); stack = stack.slice(0, -1); renderLCD(); }
+  function clearAll() { if (!stack.length) return; clearFresh(); hist.push(stack); stack = []; renderLCD(); }
+
+  // ---------- key map ----------
+  const GN = Engine.graph();
+  const IDS = T.map(t => t.id);
+  const VERY = 150;                                   // eml operations at which a key counts as very hard
+  const MAXD = Math.max.apply(null, IDS.map(i => GN[i].depth));
+  const MAXC = Math.max.apply(null, IDS.map(i => GN[i].cost));
+  const NW = 62, NH = 40, CW = 88, RH = 56, PX = 20, TOPY = 34;
+  const ANC = {};
+  IDS.forEach(id => {
+    const s = new Set();
+    const go = k => GN[k].deps.forEach(d => { if (!s.has(d)) { s.add(d); go(d); } });
+    go(id);
+    ANC[id] = s;
+  });
+  const STAT = { on: 'Unlocked', ready: 'Ready: you own every key its recipe needs', lock: 'Locked' };
+  const STAT_SHORT = { on: 'unlocked', ready: 'ready', lock: 'locked' };
+  const statusOf = id => unlocked[id] ? 'on' : (GN[id].deps.every(d => unlocked[d]) ? 'ready' : 'lock');
+  const isHard = id => GN[id].cost >= VERY;
+
+  // columns are depths; keys inside a column are ordered by where their prerequisites sit
+  const cols = [];
+  for (let d = 0; d <= MAXD; d++) cols.push([]);
+  IDS.forEach(i => cols[GN[i].depth].push(i));
+  const ROWS = Math.max.apply(null, cols.slice(1).map(c => c.length));
+  const MW = PX * 2 + MAXD * CW + NW, MH = TOPY + ROWS * RH + 10;
+  const pos = { start: { x: PX, y: TOPY + ROWS * RH / 2 } };
+  for (let d = 1; d <= MAXD; d++) {
+    const bary = id => { const ds = GN[id].deps.length ? GN[id].deps : ['start']; return ds.reduce((s, k) => s + pos[k].y, 0) / ds.length; };
+    cols[d].sort((a, b) => bary(a) - bary(b));
+    const top = TOPY + (ROWS - cols[d].length) * RH / 2;
+    cols[d].forEach((id, k) => { pos[id] = { x: PX + d * CW, y: top + k * RH + RH / 2 }; });
+  }
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const sv = (tag, attrs, txt) => {
+    const n = document.createElementNS(NS, tag);
+    Object.keys(attrs).forEach(k => n.setAttribute(k, attrs[k]));
+    if (txt !== undefined) n.textContent = txt;
+    return n;
+  };
+  let sel = null;
+
+  function renderMap() {
+    const host = $('#graph');
+    host.textContent = '';
+    const A = sel ? new Set(ANC[sel]).add(sel) : null;
+    const svg = sv('svg', { viewBox: '0 0 ' + MW + ' ' + MH, role: 'group', 'aria-label': 'Dependency map of calculator keys' });
+    for (let d = 0; d <= MAXD; d++) svg.appendChild(sv('text', { class: 'colh', x: PX + d * CW + NW / 2, y: 18 }, d === 0 ? 'START' : String(d)));
+
+    IDS.forEach(id => {
+      const to = pos[id];
+      (GN[id].deps.length ? GN[id].deps : ['start']).forEach(s => {
+        const f = pos[s], x1 = f.x + NW, y1 = f.y, x2 = to.x, y2 = to.y, dx = (x2 - x1) / 2;
+        let cls = 'edge';
+        if (A) cls += A.has(id) ? ' hl' : ' dim';
+        else if ((s === 'start' || unlocked[s]) && unlocked[id]) cls += ' on';
+        svg.appendChild(sv('path', { class: cls, d: 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2 }));
+      });
+    });
+
+    const s0 = sv('g', { class: 'node0' });
+    s0.appendChild(sv('rect', { class: 'bx', x: pos.start.x, y: pos.start.y - NH / 2, width: NW, height: NH, rx: 8 }));
+    s0.appendChild(sv('text', { class: 'tx', x: pos.start.x + NW / 2, y: pos.start.y - 1 }, '1  eml'));
+    s0.appendChild(sv('text', { class: 'sub', x: pos.start.x + NW / 2, y: pos.start.y + 12 }, 'x  y'));
+    svg.appendChild(s0);
+
+    IDS.forEach(id => {
+      const p = pos[id], k = KEYS[id], st = statusOf(id), n = GN[id];
+      const x = p.x, y = p.y - NH / 2;
+      svg.appendChild(sv('rect', { class: 'base', x, y, width: NW, height: NH, rx: 8 }));
+      const g = sv('g', {
+        class: 'node st-' + st + (A && !A.has(id) ? ' dim' : ''), tabindex: '0', role: 'button', 'data-id': id,
+        'aria-label': k.name + ', ' + STAT_SHORT[st] + ', ' + n.cost + ' eml operations, depth ' + n.depth + (isHard(id) ? ', very hard' : ''),
+      });
+      if (isHard(id)) g.appendChild(sv('rect', { class: 'ring', x: x - 4, y: y - 4, width: NW + 8, height: NH + 8, rx: 11 }));
+      if (sel === id) g.appendChild(sv('rect', { class: 'selring', x: x - 8, y: y - 8, width: NW + 16, height: NH + 16, rx: 14 }));
+      g.appendChild(sv('rect', { class: 'bx', x, y, width: NW, height: NH, rx: 8 }));
+      g.appendChild(sv('text', { class: 'tx', x: x + NW / 2, y: y + 21 }, k.label));
+      g.appendChild(sv('rect', { class: 'track', x: x + 8, y: y + NH - 11, width: NW - 16, height: 3.5, rx: 1.75 }));
+      g.appendChild(sv('rect', { class: 'bar', x: x + 8, y: y + NH - 11, width: (NW - 16) * Math.log(1 + n.cost) / Math.log(1 + MAXC), height: 3.5, rx: 1.75 }));
+      svg.appendChild(g);
+    });
+    host.appendChild(svg);
+    renderDetail();
+    renderRanks();
+  }
+
+  function renderDetail() {
+    const box = $('#detail');
+    box.textContent = '';
+    if (!sel) { box.appendChild(mk('p', 'empty', 'Tap a key to trace everything it needs. Keys with a ring are the hardest to reach.')); return; }
+    const k = KEYS[sel], n = GN[sel], st = statusOf(sel), anc = Array.from(ANC[sel]);
+    const head = mk('div', 'dhead');
+    head.appendChild(mk('span', 'chip', k.label));
+    head.appendChild(mk('span', 'dn', k.name));
+    head.appendChild(mk('span', 'stat ' + st, STAT_SHORT[st]));
+    if (isHard(sel)) head.appendChild(mk('span', 'stat hard', 'very hard'));
+    box.appendChild(head);
+    const have = anc.filter(i => unlocked[i]).length;
+    box.appendChild(mk('p', 'dfacts', n.cost + ' eml operations · depth ' + n.depth + ' · ' +
+      (anc.length ? 'needs ' + anc.length + ' earlier keys, you have ' + have : 'needs only 1 and eml')));
+    if (n.deps.length) {
+      const row = mk('div', 'needs');
+      row.appendChild(mk('span', '', 'Recipe uses'));
+      n.deps.forEach(d => {
+        const c = mk('button', 'nchip ' + statusOf(d), KEYS[d].label);
+        c.type = 'button'; c.dataset.id = d;
+        c.setAttribute('aria-label', 'Select ' + KEYS[d].name);
+        row.appendChild(c);
+      });
+      box.appendChild(row);
+    }
+    if (unlocked[sel]) {
+      box.appendChild(mk('p', 'dfacts', 'Unlocked with ' + unlocked[sel]));
+    } else {
+      const b = mk('button', 'mini', 'Open the hint in the calculator');
+      b.type = 'button'; b.id = 'mapHint';
+      box.appendChild(b);
+    }
+  }
+
+  function fillRanks(host, ids, val, max, flag) {
+    const box = $(host);
+    box.textContent = '';
+    ids.forEach(id => {
+      const b = mk('button', 'rrow');
+      b.type = 'button'; b.dataset.id = id;
+      b.setAttribute('aria-label', KEYS[id].name + ', ' + val(id) + ', ' + STAT_SHORT[statusOf(id)]);
+      b.appendChild(mk('span', 'rl', KEYS[id].label));
+      const tr = mk('span', 'rtrack'), f = mk('span', 'rfill' + (flag && isHard(id) ? ' hard' : ''));
+      f.style.width = Math.max(3, 100 * val(id) / max) + '%';
+      tr.appendChild(f);
+      b.appendChild(tr);
+      b.appendChild(mk('span', 'rv', String(val(id))));
+      b.appendChild(mk('span', 'rs', STAT_SHORT[statusOf(id)]));
+      box.appendChild(b);
+    });
+  }
+  function renderRanks() {
+    fillRanks('#rankCost', IDS.slice().sort((a, b) => GN[b].cost - GN[a].cost).slice(0, 8), id => GN[id].cost, MAXC, true);
+    fillRanks('#rankDepth', IDS.slice().sort((a, b) => GN[b].depth - GN[a].depth || GN[b].cost - GN[a].cost).slice(0, 5), id => GN[id].depth, MAXD, false);
+  }
+
+  (function writeWhy() {
+    const hard = IDS.filter(isHard).sort((a, b) => GN[b].cost - GN[a].cost);
+    const lab = ids => ids.map(i => KEYS[i].label).join(' ');
+    const allI = hard.every(h => ANC[h].has('i'));
+    $('#why1').textContent = lab(hard) + ' are the most expensive, from ' + GN[hard[hard.length - 1]].cost + ' to ' + GN[hard[0]].cost +
+      ' eml operations once their recipes are fully expanded.' +
+      (allI ? ' Every one of them rests on i, which needs ' + lab(GN.i.deps) + ' unlocked first.' : '');
+    const deep = IDS.slice().sort((a, b) => GN[b].depth - GN[a].depth || GN[b].cost - GN[a].cost)[0];
+    $('#why2').textContent = KEYS[deep].label + ' has the longest chain: ' + GN[deep].depth + ' keys, each unlocked before the next. A key can be shallow and expensive, or deep and cheap.';
+    $('#why3').textContent = 'Cost counts the eml operations in a key’s recipe with every key inside it replaced by its own recipe. Depth is the longest chain of keys that must exist first. Both follow the guided recipes, so a shorter route may exist.';
+  })();
+
+  function select(id, refocus) {
+    sel = sel === id ? null : id;
+    renderMap();
+    if (refocus && sel) { const n = document.querySelector('#graph .node[data-id="' + sel + '"]'); if (n) n.focus(); }
+  }
+  $('#viewMap').addEventListener('click', e => {
+    if (e.target.closest('#mapHint')) { setView('calculator'); location.hash = 'calculator'; showHint(KEYS[sel].target); return; }
+    const t = e.target.closest('[data-id]');
+    if (t) select(t.dataset.id, false);
+  });
+  $('#graph').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const t = e.target.closest('[data-id]');
+    if (t) { e.preventDefault(); select(t.dataset.id, true); }
+  });
+
+  function setView(v) {
+    const map = v === 'key-map';
+    $('#viewCalc').hidden = map;
+    $('#viewMap').hidden = !map;
+    $('#tabCalc').setAttribute('aria-selected', String(!map));
+    $('#tabMap').setAttribute('aria-selected', String(map));
+  }
+  const applyHash = () => setView(location.hash === '#key-map' ? 'key-map' : 'calculator');
+  const goView = v => { setView(v); try { location.hash = v; } catch (e) { /* ignore */ } };
+  $('#tabCalc').addEventListener('click', () => goView('calculator'));
+  $('#tabMap').addEventListener('click', () => goView('key-map'));
+  window.addEventListener('hashchange', applyHash);
+
+  // ---------- events ----------
+  $('#pad').addEventListener('click', e => {
+    const b = e.target.closest('button[data-kid]');
+    if (!b) return;
+    const k = KEYS[b.dataset.kid];
+    if (keyAvail(k)) apply(k.tok); else showHint(k.target);
+  });
+  $('#bUndo').addEventListener('click', undo);
+  $('#bDrop').addEventListener('click', drop);
+  $('#bClear').addEventListener('click', clearAll);
+  $('#vx').addEventListener('input', renderLCD);
+  $('#vy').addEventListener('input', renderLCD);
+
+  document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const k = e.key;
+    if (tag === 'BUTTON' && (k === 'Enter' || k === ' ')) return;
+    if (k === 'Enter') { e.preventDefault(); apply('dup'); return; }
+    if (k === 'Backspace') { e.preventDefault(); undo(); return; }
+    if (k === 'Delete') { e.preventDefault(); drop(); return; }
+    if (k === 'Escape') { clearAll(); return; }
+    const map = { '+': '+', '-': '-', '*': '*', '/': '/', '^': '^', x: 'x', y: 'y' };
+    const tok = /^[0-9]$/.test(k) ? k : map[k];
+    if (tok && tokAvail(tok)) { e.preventDefault(); apply(tok); }
+  });
+
+  let resetTimer = null;
+  $('#reset').addEventListener('click', () => {
+    const b = $('#reset');
+    if (!resetTimer) {
+      b.textContent = 'Tap again to erase all progress';
+      resetTimer = setTimeout(() => { resetTimer = null; b.textContent = 'Reset progress'; }, 4000);
+      return;
+    }
+    clearTimeout(resetTimer); resetTimer = null; b.textContent = 'Reset progress';
+    unlocked = {}; fresh.clear(); stack = []; hist = []; tape = [];
+    save(); renderAll(); intro();
+  });
+
+  function renderAll() { renderMeter(); renderKeys(); renderLCD(); renderNotebook(); renderTape(); renderMap(); }
+  load();
+  renderAll();
+  applyHash();
+  if (count() === 0) intro();
+  else setSlate({ title: 'Welcome back', body: count() + ' of ' + T.length + ' keys unlocked. Tap a dashed key for a hint.' });
+})();
+</script>
+</body>
+</html>
