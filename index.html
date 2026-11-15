@@ -109,7 +109,8 @@ body {
 .vars input { width: 76px; font: 600 16px var(--mono); padding: 5px 8px; border-radius: 6px; border: 1px solid var(--key-edge); background: var(--key); color: var(--key-ink); }
 .vars .vnote { color: var(--muted); font: 400 12px var(--body); }
 
-.actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pad.extras { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .slate { background: var(--slate); border-radius: 10px; padding: 10px 12px; min-height: 92px; display: flex; flex-direction: column; gap: 6px; }
 .slate .st { font: 600 14px/1.3 var(--display); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .slate .sb { margin: 0; font-size: 13px; color: var(--ink); }
@@ -265,6 +266,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       </div>
       <div class="actions">
         <button class="act" id="bUndo" type="button" aria-label="Undo the last key">UNDO</button>
+        <button class="act" id="bDrop" type="button" aria-label="Drop the top value">DROP</button>
         <button class="act" id="bClear" type="button" aria-label="Clear the stack">CLEAR</button>
       </div>
       <div class="pad extras" id="extras"></div>
@@ -587,7 +589,7 @@ const Engine = (() => {
   }
   const prettyTokens = toks => toks.map(L).join(' ');
 
-  // the row above the keypad; drop is an action key added next to these
+  // the row above the slate
   const EXTRAS = ['px', 'py', 'pdup', 'pswap'];
 
   return { T, KEYS, LAYOUT, EXTRAS, PRIM, C, step, run, lexRecipe, evalNode, findMatches, fmt, prettyTokens, graph };
@@ -655,11 +657,6 @@ const Engine = (() => {
       host.appendChild(b);
     };
     EXTRAS.forEach(kid => put(extras, kid));
-    const drop = mk('button', 'key k-stack', 'drop');
-    drop.type = 'button';
-    drop.id = 'bDrop';
-    drop.setAttribute('aria-label', 'Drop the top value');
-    extras.appendChild(drop);
     LAYOUT.forEach(row => row.forEach(kid => put(pad, kid)));
   }
   function renderLCD() {
@@ -999,7 +996,6 @@ const Engine = (() => {
 
   // ---------- events ----------
   const onKey = e => {
-    if (e.target.closest('#bDrop')) { drop(); return; }
     const b = e.target.closest('button[data-kid]');
     if (!b) return;
     const k = KEYS[b.dataset.kid];
@@ -1008,6 +1004,7 @@ const Engine = (() => {
   $('#pad').addEventListener('click', onKey);
   $('#extras').addEventListener('click', onKey);
   $('#bUndo').addEventListener('click', undo);
+  $('#bDrop').addEventListener('click', drop);
   $('#bClear').addEventListener('click', clearAll);
   $('#vx').addEventListener('input', renderLCD);
   $('#vy').addEventListener('input', renderLCD);
