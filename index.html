@@ -126,8 +126,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
 .pad { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .key { height: 44px; min-width: 0; border: 0; border-radius: 8px; font: 600 14px var(--mono); background: var(--key); color: var(--key-ink); box-shadow: 0 2px 0 var(--key-edge); user-select: none; padding: 0; }
-.pad.extras { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.key.wide { grid-column: span 4; font-size: 16px; letter-spacing: 0.06em; }
+.key.wide { grid-column: span 5; font-size: 16px; letter-spacing: 0.06em; }
 .key.k-op, .key.k-var, .key.k-stack { background: var(--key-op); }
 .key.k-fn, .key.k-const { background: var(--key-fn); }
 .key.k-shift { background: var(--shift); color: var(--shift-ink); }
@@ -268,8 +267,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         <button class="act" id="bUndo" type="button" aria-label="Undo the last key">UNDO</button>
         <button class="act" id="bClear" type="button" aria-label="Clear the stack">CLEAR</button>
       </div>
-      <div class="slate" id="slate" role="status" aria-live="polite"></div>
       <div class="pad extras" id="extras"></div>
+      <div class="slate" id="slate" role="status" aria-live="polite"></div>
       <div class="pad" id="pad"></div>
     </section>
 
@@ -520,9 +519,9 @@ const Engine = (() => {
     ['sinh', 'cosh', 'tanh', 'ln', 'log'],
     ['sq', 'sqrt', 'inv', 'pow', 'abs'],
     ['d7', 'd8', 'd9', 'div', 'neg'],
-    ['d4', 'd5', 'd6', 'mul', 'pdup'],
-    ['p1', 'd2', 'd3', 'sub', 'add'],
-    ['d0', 'peml'],
+    ['d4', 'd5', 'd6', 'mul', 'add'],
+    ['p1', 'd2', 'd3', 'd0', 'sub'],
+    ['peml'],
   ];
 
   // ---------- dependency graph, read straight from the guided recipes ----------
@@ -589,7 +588,7 @@ const Engine = (() => {
   const prettyTokens = toks => toks.map(L).join(' ');
 
   // the row above the keypad; drop is an action key added next to these
-  const EXTRAS = ['px', 'py', 'pswap'];
+  const EXTRAS = ['px', 'py', 'pdup', 'pswap'];
 
   return { T, KEYS, LAYOUT, EXTRAS, PRIM, C, step, run, lexRecipe, evalNode, findMatches, fmt, prettyTokens, graph };
 })();

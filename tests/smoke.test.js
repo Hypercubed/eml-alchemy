@@ -16,9 +16,9 @@ const log = (...a) => console.log(...a);
 
 log('extras row:', Array.from(d.querySelectorAll('#extras .key')).map(k => k.textContent).join(' | '),
     '| pad starts:', Array.from(d.querySelectorAll('#pad .key')).slice(0, 5).map(k => k.textContent).join(' '),
-    '| eml wide:', d.querySelector('#pad .key.wide').textContent, '| extras above pad:', !!(d.getElementById('extras').compareDocumentPosition(d.getElementById('pad')) & 4),
+    '| eml wide:', d.querySelector('#pad .key.wide').textContent, '| extras above slate:', !!(d.getElementById('extras').compareDocumentPosition(d.getElementById('slate')) & 4), '| slate above pad:', !!(d.getElementById('slate').compareDocumentPosition(d.getElementById('pad')) & 4), '| extras above pad:', !!(d.getElementById('extras').compareDocumentPosition(d.getElementById('pad')) & 4),
     '| actions:', Array.from(d.querySelectorAll('.actions .act')).map(b => b.textContent).join(' '),
-    '| x/y/swap/drop left in pad:', Array.from(d.querySelectorAll('#pad .key')).filter(k => ['x', 'y', 'swap', 'drop'].includes(k.textContent)).length);
+    '| x/y/dup/swap/drop left in pad:', Array.from(d.querySelectorAll('#pad .key')).filter(k => ['x', 'y', 'dup', 'swap', 'drop'].includes(k.textContent)).length);
 log('keys', d.querySelectorAll('#pad .key, #extras .key').length, '| lit at start:', d.querySelectorAll('#pad .key:not(.ghost), #extras .key:not(.ghost)').length, '| brackets/equals present:',
   !!d.getElementById('bEq') || Array.from(d.querySelectorAll('#pad .key, #extras .key')).some(k => k.textContent === '(' || k.textContent === ')'));
 log('stack at start:', rows());
